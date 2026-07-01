@@ -13,8 +13,13 @@ DXVK_LIB_DIR="${BUILD_DIR}/_deps/dxvk-src/lib"
 SDL3_LIB_DIR="${BUILD_DIR}/_deps/sdl3-build"
 SDL3_IMAGE_LIB_DIR="${BUILD_DIR}/_deps/sdl3_image-build"
 GAMESPY_LIB="${BUILD_DIR}/libgamespy.so"
-FFMPEG_LIB_DIR="/usr/lib/x86_64-linux-gnu"
-FFMPEG_DEP_LIB_DIR="/lib/x86_64-linux-gnu"
+# GeneralsX @bugfix julien 01/07/2026 Include Fedora/RHEL lib64 paths alongside Debian multiarch dirs.
+FFMPEG_LIB_DIRS=(
+    "/usr/lib/x86_64-linux-gnu"
+    "/lib/x86_64-linux-gnu"
+    "/usr/lib64"
+    "/lib64"
+)
 RUNTIME_DIR="${HOME}/GeneralsX/Generals"
 # Note: CMakeLists.txt uses OUTPUT_NAME GeneralsX on Linux (see Generals/Code/Main/CMakeLists.txt)
 BINARY_SRC="${BUILD_DIR}/Generals/GeneralsX"
@@ -111,18 +116,16 @@ copy_ldd_deps() {
 # GeneralsX @build GitHubCopilot 17/05/2026 Deploy FFmpeg runtime libs transitively so runtime does not depend on host SONAME layout.
 echo "  Copying FFmpeg runtime libraries..."
 shopt -s nullglob
-ffmpeg_roots=(
-    "${FFMPEG_LIB_DIR}"/libavcodec.so*
-    "${FFMPEG_LIB_DIR}"/libavformat.so*
-    "${FFMPEG_LIB_DIR}"/libavutil.so*
-    "${FFMPEG_LIB_DIR}"/libswresample.so*
-    "${FFMPEG_LIB_DIR}"/libswscale.so*
-    "${FFMPEG_DEP_LIB_DIR}"/libavcodec.so*
-    "${FFMPEG_DEP_LIB_DIR}"/libavformat.so*
-    "${FFMPEG_DEP_LIB_DIR}"/libavutil.so*
-    "${FFMPEG_DEP_LIB_DIR}"/libswresample.so*
-    "${FFMPEG_DEP_LIB_DIR}"/libswscale.so*
-)
+ffmpeg_roots=()
+for ffmpeg_lib_dir in "${FFMPEG_LIB_DIRS[@]}"; do
+    ffmpeg_roots+=(
+        "${ffmpeg_lib_dir}"/libavcodec.so*
+        "${ffmpeg_lib_dir}"/libavformat.so*
+        "${ffmpeg_lib_dir}"/libavutil.so*
+        "${ffmpeg_lib_dir}"/libswresample.so*
+        "${ffmpeg_lib_dir}"/libswscale.so*
+    )
+done
 shopt -u nullglob
 for ffmpeg_root in "${ffmpeg_roots[@]}"; do
     cp -a "${ffmpeg_root}" "${RUNTIME_DIR}/" 2>/dev/null || true

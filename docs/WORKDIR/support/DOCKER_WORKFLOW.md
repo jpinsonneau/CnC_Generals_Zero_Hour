@@ -35,11 +35,11 @@ This approach keeps images small, allows easy vcpkg updates, and persists packag
 
 ```bash
 # Build all images (recommended first time)
-./scripts/docker-build-images.sh all
+./scripts/env/docker/docker-build-images.sh all
 
 # Or build individually
-./scripts/docker-build-images.sh linux
-./scripts/docker-build-images.sh mingw
+./scripts/env/docker/docker-build-images.sh linux
+./scripts/env/docker/docker-build-images.sh mingw
 ```
 
 **Time**: ~2-3 minutes (images are lightweight now!)
@@ -53,10 +53,10 @@ vcpkg is stored locally at `~/.generalsx/vcpkg` and mounted into containers:
 ```bash
 # Option 1: Automatic (recommended)
 # Build scripts auto-initialize on first run
-./scripts/docker-build-linux-zh.sh  # Will run init if needed
+./scripts/build/linux/docker-build-linux-zh.sh  # Will run init if needed
 
 # Option 2: Manual (if you want to set up ahead of time)
-./scripts/docker-vcpkg-init.sh  # ~2-5 minutes
+./scripts/build/linux/docker-configure-linux.sh  # auto-bootstraps vcpkg on first run (~2-5 minutes)
 ```
 
 **What happens**:
@@ -96,10 +96,10 @@ All build scripts **automatically check** for images and vcpkg:
 **Example**:
 ```bash
 # First run: Builds image + initializes vcpkg + compiles
-./scripts/docker-build-linux-zh.sh
+./scripts/build/linux/docker-build-linux-zh.sh
 
 # Subsequent runs: Just compiles (fast!)
-./scripts/docker-build-linux-zh.sh
+./scripts/build/linux/docker-build-linux-zh.sh
 ```
 
 ### Build Commands
@@ -108,27 +108,28 @@ All build scripts **automatically check** for images and vcpkg:
 
 ```bash
 # Configure (optional, build scripts auto-configure)
-./scripts/docker-configure-linux.sh linux64-deploy
+./scripts/build/linux/docker-configure-linux.sh linux64-deploy
 
 # Build Zero Hour (linux64-deploy preset)
-./scripts/docker-build-linux-zh.sh
+./scripts/build/linux/docker-build-linux-zh.sh
 
 # Build Generals base game
-./scripts/docker-build-linux-generals.sh
+./scripts/build/linux/docker-build-linux-generals.sh
 ```
 
-**Output**: Native Linux ELF binaries
-- `build/linux64-deploy/GeneralsMD/GeneralsXZH`
-- `build/linux64-deploy/Generals/GeneralsX`
+**Output**: Native Linux ELF binaries (after a full build completes)
+- Build tree: `build/linux64-deploy/` (CMake reports `/work/build/linux64-deploy` inside Docker)
+- Zero Hour binary: `build/linux64-deploy/GeneralsMD/GeneralsXZH`
+- Generals binary: `build/linux64-deploy/Generals/GeneralsX`
 
 #### Windows MinGW Cross-Compile
 
 ```bash
 # Build Zero Hour (mingw-w64-i686 preset)
-./scripts/docker-build-mingw-zh.sh
+./scripts/build/linux/docker-build-mingw-zh.sh
 
 # Or specify preset explicitly
-./scripts/docker-build-mingw-zh.sh mingw-w64-i686
+./scripts/build/linux/docker-build-mingw-zh.sh mingw-w64-i686
 ```
 
 **Output**: Windows .exe binaries
@@ -138,7 +139,7 @@ All build scripts **automatically check** for images and vcpkg:
 
 ```bash
 # Smoke test Linux binary (checks initialization)
-./scripts/docker-smoke-test-zh.sh
+./scripts/qa/smoke/docker-smoke-test-zh.sh
 ```
 
 ## Performance Comparison
@@ -191,10 +192,10 @@ Rebuild images when:
 
 ```bash
 # Force rebuild all images
-./scripts/docker-build-images.sh all
+./scripts/env/docker/docker-build-images.sh all
 
 # Rebuild specific image
-./scripts/docker-build-images.sh linux
+./scripts/env/docker/docker-build-images.sh linux
 ```
 
 **Time**: ~2-3 minutes (Docker uses layer caching)
@@ -211,7 +212,7 @@ git pull
 Or re-initialize:
 ```bash
 rm -rf ~/.generalsx/vcpkg
-./scripts/docker-vcpkg-init.sh
+./scripts/build/linux/docker-configure-linux.sh
 ```
 
 ## Troubleshooting
@@ -225,7 +226,7 @@ Error: vcpkg directory not found: ~/.generalsx/vcpkg
 
 **Solution**: Initialize vcpkg:
 ```bash
-./scripts/docker-vcpkg-init.sh
+./scripts/build/linux/docker-configure-linux.sh
 ```
 
 Or check if it exists:
@@ -239,7 +240,7 @@ If vcpkg fails with git baseline errors:
 ```bash
 # Re-initialize (fixes corruption)
 rm -rf ~/.generalsx/vcpkg
-./scripts/docker-vcpkg-init.sh
+./scripts/build/linux/docker-configure-linux.sh
 ```
 
 ### Image Not Found
@@ -251,7 +252,7 @@ Error: Cannot find image 'generalsx/linux-builder:latest'
 
 **Solution**: Build the image:
 ```bash
-./scripts/docker-build-images.sh linux
+./scripts/env/docker/docker-build-images.sh linux
 ```
 
 Or let the build script do it automatically.
@@ -264,7 +265,7 @@ docker rmi generalsx/linux-builder:latest
 docker rmi generalsx/mingw-builder:latest
 
 # Rebuild
-./scripts/docker-build-images.sh all
+./scripts/env/docker/docker-build-images.sh all
 ```
 
 ### vcpkg Taking Too Much Space
@@ -281,7 +282,7 @@ rm -rf ~/.generalsx/vcpkg/downloads
 
 # Full cleanup and reinstall
 rm -rf ~/.generalsx/vcpkg
-./scripts/docker-vcpkg-init.sh
+./scripts/build/linux/docker-configure-linux.sh
 ```
 
 ### Full Docker Cleanup
@@ -292,8 +293,8 @@ If Docker is taking too much space:
 docker system prune --all --volumes
 
 # Then rebuild GeneralsX images and reinit vcpkg
-./scripts/docker-build-images.sh all
-./scripts/docker-vcpkg-init.sh
+./scripts/env/docker/docker-build-images.sh all
+./scripts/build/linux/docker-configure-linux.sh
 ```
 
 ## Advanced Usage
@@ -327,7 +328,7 @@ Edit the Dockerfiles in `resources/dockerbuild/`:
 
 Then rebuild:
 ```bash
-./scripts/docker-build-images.sh all
+./scripts/env/docker/docker-build-images.sh all
 ```
 
 ### Using Different vcpkg Location
@@ -335,7 +336,7 @@ Then rebuild:
 ```bash
 # Set custom location in scripts
 export VCPKG_DIR="/custom/path/to/vcpkg"
-./scripts/docker-build-linux-zh.sh
+./scripts/build/linux/docker-build-linux-zh.sh
 ```
 
 ## Integration with VS Code Tasks
@@ -354,8 +355,8 @@ Just run tasks from VS Code; image and vcpkg management is automatic.
 ## References
 
 - Dockerfiles: `resources/dockerbuild/`
-- Build scripts: `scripts/docker-*.sh`
-- vcpkg init: `scripts/docker-vcpkg-init.sh`
+- Build scripts: `scripts/build/linux/docker-*.sh`, `scripts/qa/smoke/docker-smoke-test-zh.sh`, `scripts/env/docker/docker-build-images.sh`
+- vcpkg init: auto-bootstrapped by `scripts/build/linux/docker-configure-linux.sh` (stored in `~/.generalsx/vcpkg`)
 - Image build logs: `logs/` (created during build)
 
 ---

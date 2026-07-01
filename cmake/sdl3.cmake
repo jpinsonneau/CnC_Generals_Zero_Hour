@@ -59,6 +59,9 @@ if(SAGE_USE_SDL3)
         find_library(PNG_LIBRARY NAMES png16 png NO_CMAKE_PATH NO_CMAKE_FIND_ROOT_PATH)
         find_path(PNG_PNG_INCLUDE_DIR png.h PATH_SUFFIXES libpng16 NO_CMAKE_PATH NO_CMAKE_FIND_ROOT_PATH)
         find_package(PNG REQUIRED MODULE)
+        # GeneralsX @bugfix julien 01/07/2026 Skip SDL3_image config-mode PNG (vcpkg) on native Linux.
+        # vcpkg PNGConfig re-imports ZLIB and conflicts with ZLIB::ZLIB already defined by the manifest.
+        set(SDLIMAGE_DYNAMIC_PNG "${PNG_LIBRARY}" CACHE FILEPATH "System libpng for SDL3_image" FORCE)
     else()
         # macOS: Force Homebrew's dynamic libpng, bypassing vcpkg's static .a
         # GeneralsX @build BenderAI 24/02/2026 - Phase 5 macOS port
@@ -104,16 +107,15 @@ if(SAGE_USE_SDL3)
         URL_HASH ${SDL3_IMAGE_URL_HASH}
     )
     
-    # Configure SDL3_image build options
-    # Note: PNG will use system libpng-dev (installed in Docker, no vcpkg conflicts)
-    set(SDL3IMAGE_INSTALL ON CACHE BOOL "Install SDL3_image" FORCE)
-    set(SDL3IMAGE_DEPS_SHARED ON CACHE BOOL "Use system shared dependencies" FORCE)
-    set(SDL3IMAGE_JPG ON CACHE BOOL "Enable JPG support" FORCE)
-    set(SDL3IMAGE_PNG ON CACHE BOOL "Enable PNG support (ANI cursor loading)" FORCE)
-    set(SDL3IMAGE_TIF ON CACHE BOOL "Enable TIF support" FORCE)
-    set(SDL3IMAGE_WEBP ON CACHE BOOL "Enable WebP support" FORCE)
-    set(SDL3IMAGE_AVIF OFF CACHE BOOL "Disable AVIF (optional)" FORCE)
-    set(SDL3IMAGE_XCUR ON CACHE BOOL "Enable X cursor support" FORCE)
+    # Configure SDL3_image build options (SDLIMAGE_* prefix matches upstream SDL3_image CMake)
+    set(SDLIMAGE_INSTALL OFF CACHE BOOL "Install SDL3_image" FORCE)
+    set(SDLIMAGE_DEPS_SHARED ON CACHE BOOL "Use system shared dependencies" FORCE)
+    set(SDLIMAGE_JPG ON CACHE BOOL "Enable JPG support" FORCE)
+    set(SDLIMAGE_PNG ON CACHE BOOL "Enable PNG support (ANI cursor loading)" FORCE)
+    set(SDLIMAGE_TIF ON CACHE BOOL "Enable TIF support" FORCE)
+    set(SDLIMAGE_WEBP ON CACHE BOOL "Enable WebP support" FORCE)
+    set(SDLIMAGE_AVIF OFF CACHE BOOL "Disable AVIF (optional)" FORCE)
+    set(SDLIMAGE_XCUR ON CACHE BOOL "Enable X cursor support" FORCE)
     
     FetchContent_MakeAvailable(SDL3_image)
     

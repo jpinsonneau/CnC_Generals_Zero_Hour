@@ -136,7 +136,7 @@ endif()
 # SagePatch (casual QoL extras: screenshot, cursor lock, brightness, etc.)
 # Must be added before the game targets so sage_patch target exists when we
 # declare the dependency below.
-if(RTS_BUILD_OPTION_SAGE_PATCH)
+if(RTS_BUILD_OPTION_SAGE_PATCH AND SAGE_USE_SDL3)
     add_subdirectory(Patches/SagePatch)
 endif()
 

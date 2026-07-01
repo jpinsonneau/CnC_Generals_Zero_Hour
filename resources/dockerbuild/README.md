@@ -21,7 +21,7 @@ This directory contains Dockerfiles for GeneralsX development environments.
 **Build**:
 ```bash
 docker build -t generalsx/linux-builder:latest -f Dockerfile.linux .
-# Or use: ./scripts/docker-build-images.sh linux
+# Or use: ./scripts/env/docker/docker-build-images.sh linux
 ```
 
 ### `Dockerfile.mingw`
@@ -41,7 +41,7 @@ docker build -t generalsx/linux-builder:latest -f Dockerfile.linux .
 **Build**:
 ```bash
 docker build -t generalsx/mingw-builder:latest -f Dockerfile.mingw .
-# Or use: ./scripts/docker-build-images.sh mingw
+# Or use: ./scripts/env/docker/docker-build-images.sh mingw
 ```
 
 ## UFirst-Time Setup
@@ -51,10 +51,10 @@ vcpkg is stored locally at `~/.generalsx/vcpkg` and mounted into containers:
 ```bash
 # Option 1: Automatic (recommended)
 # Build scripts auto-initialize vcpkg on first run
-./scripts/docker-build-linux-zh.sh  # Will run docker-vcpkg-init.sh if needed
+./scripts/build/linux/docker-build-linux-zh.sh  # Will run docker-vcpkg-init.sh if needed
 
 # Option 2: Manual (if you want to set up ahead of time)
-./scripts/docker-vcpkg-init.sh  # One-time, ~2-5 minutes
+./scripts/build/linux/docker-configure-linux.sh  # auto-bootstraps vcpkg on first run
 ```
 
 **What happens**:
@@ -87,7 +87,7 @@ git pull
 Or re-run init script:
 ```bash
 rm -rf ~/.generalsx/vcpkg
-./scripts/docker-vcpkg-init.sh
+./scripts/build/linux/docker-configure-linux.sh
 ```
 
 ### Persists vcpkg package cache between builds
@@ -97,8 +97,8 @@ Build scripts automatically check for images and vcpkg, build/initialize
 ### Automated (Recommended)
 Build scripts automatically check for images and build if missing:
 ```bash
-./scripts/docker-build-linux-zh.sh  # Auto-uses generalsx/linux-builder
-./scripts/docker-build-mingw-zh.sh  # Auto-uses generalsx/mingw-builder
+./scripts/build/linux/docker-build-linux-zh.sh  # Auto-uses generalsx/linux-builder
+./scripts/build/linux/docker-build-mingw-zh.sh  # Auto-uses generalsx/mingw-builder
 ```
 
 ### Manual
@@ -114,7 +114,7 @@ RUN curl -sL https://github.com/Kitware/CMake/releases/download/v3.28.0/cmake-3.
 
 Then rebuild:
 ```bash
-./scripts/docker-build-images.sh all
+./scripts/env/docker/docker-build-images.sh all
 ```dockerfile
 # Current (3.25.0)
 RUN curl -sL https://github.com/Kitware/CMake/releases/download/v3.25.0/cmake-3.25.0-linux-x86_64.tar.gz | tar -xz ...
@@ -125,14 +125,14 @@ RUN curl -sL https://github.com/Kitware/CMake/releases/download/v3.28.0/cmake-3.
 
 Then rebuild:
 ```bash
-./scripts/docker-build-images.sh all
+./scripts/env/docker/docker-build-images.sh all
 ```
 
 ### Updating vcpkg
 vcpkg is cloned from GitHub at build time (always latest). To update:
 ```bash
 # Just rebuild the image
-./scripts/docker-build-images.sh linux
+./scripts/env/docker/docker-build-images.sh linux
 
 # Or manually update in running container
 docker run --rm -it generalsx/linux-builder:latest bash
@@ -146,7 +146,7 @@ git pull
 ### Image Not Found
 If build scripts complain about missing image:
 ```bash
-./scripts/docker-build-images.sh all
+./scripts/env/docker/docker-build-images.sh all
 ```
 
 ### Image Taking Too Much Space
@@ -159,7 +159,7 @@ docker rmi generalsx/mingw-builder:latest
 ./scvcpkg Not Found
 If build scripts complain about vcpkg:
 ```bash
-./scripts/docker-vcpkg-init.sh
+./scripts/build/linux/docker-configure-linux.sh
 ```
 
 Or check if it exists:
@@ -172,7 +172,7 @@ If you see git baseline errors, vcpkg might be corrupted:
 ```bash
 # Re-initialize
 rm -rf ~/.generalsx/vcpkg
-./scripts/docker-vcpkg-init.sh
+./scripts/build/linux/docker-configure-linux.sh
 ```
 
 ### ripts/docker-build-images.sh all
@@ -184,7 +184,7 @@ rm -rf ~/.generalsx/vcpkg
 docker system prune --all --volumes
 
 # Rebuild GeneralsX images
-./scripts/docker-build-images.sh all
+./scripts/env/docker/docker-build-images.sh all
 ```
 
 ## VS Code Tasks
@@ -197,7 +197,7 @@ Tasks available in VS Code (Cmd+Shift+P → "Tasks: Run Task"):
 ## References
 
 - Documentation: `docs/WORKDIR/support/DOCKER_WORKFLOW.md`
-- Build scripts: `scripts/docker-*.sh`
+- Build scripts: `scripts/build/linux/docker-*.sh`, `scripts/env/docker/docker-build-images.sh`
 - Tasks: `.vscode/tasks.json`
 
 ---

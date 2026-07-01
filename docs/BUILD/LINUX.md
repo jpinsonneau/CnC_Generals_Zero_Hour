@@ -11,13 +11,34 @@ This guide provides step-by-step instructions for building GeneralsX on Linux 64
 git clone https://github.com/fbraz3/GeneralsX.git
 cd GeneralsX
 
-# Build Zero Hour (GeneralsXZH) with Docker
-./scripts/docker-build-linux-zh.sh linux64-deploy
+# Configure + build Zero Hour (GeneralsXZH) with Docker
+./scripts/build/linux/docker-configure-linux.sh linux64-deploy   # optional; build script also configures
+./scripts/build/linux/docker-build-linux-zh.sh linux64-deploy
 
-# Binary location: build/linux64-deploy/GeneralsMD/GeneralsXZH
+# Build tree (CMake/Ninja): build/linux64-deploy/
+# Game binary (after build): build/linux64-deploy/GeneralsMD/GeneralsXZH
 ```
 
+Inside Docker, the repo is mounted at `/work`, so CMake reports `/work/build/linux64-deploy` for the same directory.
+
 **Result**: Native Linux ELF binary (~177 MB) with DXVK (DirectX → Vulkan) and SDL3.
+
+> **Note**: Do not use `./scripts/docker-build.sh` — that is the legacy VC6/Wine builder. It writes to `build/docker/` and produces 32-bit Windows `.exe` files, not this native Linux port.
+
+### Output locations
+
+| Stage | Host path | Inside Docker |
+|-------|-----------|---------------|
+| CMake/Ninja build tree | `build/linux64-deploy/` | `/work/build/linux64-deploy/` |
+| Compiled game binary | `build/linux64-deploy/GeneralsMD/GeneralsXZH` | `/work/build/linux64-deploy/GeneralsMD/GeneralsXZH` |
+| Deployed runtime (to play) | `~/GeneralsX/GeneralsZH/GeneralsXZH` | — |
+
+To deploy and run after building:
+
+```bash
+./scripts/build/linux/deploy-linux-zh.sh
+./scripts/build/linux/run-linux-zh.sh -win
+```
 
 ---
 
@@ -124,16 +145,16 @@ sudo pacman -S mesa glu alsa-lib
 
 ```bash
 # 1. Configure build (creates CMake cache inside Docker)
-./scripts/docker-configure-linux.sh linux64-deploy
+./scripts/build/linux/docker-configure-linux.sh linux64-deploy
 
 # 2. Build Zero Hour
-./scripts/docker-build-linux-zh.sh linux64-deploy
+./scripts/build/linux/docker-build-linux-zh.sh linux64-deploy
 
 # 3. Build Generals (optional)
-./scripts/docker-build-linux-generals.sh linux64-deploy
+./scripts/build/linux/docker-build-linux-generals.sh linux64-deploy
 
 # 4. Smoke test (optional)
-./scripts/docker-smoke-test-zh.sh linux64-deploy
+./scripts/qa/smoke/docker-smoke-test-zh.sh linux64-deploy
 ```
 
 **Available Presets**:
@@ -160,12 +181,14 @@ cmake --preset linux64-deploy
 
 ```bash
 # Primary: Zero Hour (GeneralsXZH)
-./scripts/docker-build-linux-zh.sh linux64-deploy
-# Output: build/linux64-deploy/GeneralsMD/GeneralsXZH
+./scripts/build/linux/docker-build-linux-zh.sh linux64-deploy
+# Build tree: build/linux64-deploy/
+# Binary:     build/linux64-deploy/GeneralsMD/GeneralsXZH
 
 # Secondary: Generals (GeneralsX)
-./scripts/docker-build-linux-generals.sh linux64-deploy
-# Output: build/linux64-deploy/Generals/GeneralsX
+./scripts/build/linux/docker-build-linux-generals.sh linux64-deploy
+# Build tree: build/linux64-deploy/
+# Binary:     build/linux64-deploy/Generals/GeneralsX
 ```
 
 ### Native Method
@@ -219,7 +242,7 @@ cmake --build build/linux64-deploy --target z_generals -j 4
 rm -rf build/linux64-deploy
 
 # Docker: Reconfigure
-./scripts/docker-configure-linux.sh linux64-deploy
+./scripts/build/linux/docker-configure-linux.sh linux64-deploy
 
 # Native: Reconfigure
 cmake --preset linux64-deploy
@@ -263,8 +286,8 @@ sudo pacman -S gcc
 rm -rf build/linux64-deploy
 
 # Docker:
-./scripts/docker-configure-linux.sh linux64-deploy
-./scripts/docker-build-linux-zh.sh linux64-deploy
+./scripts/build/linux/docker-configure-linux.sh linux64-deploy
+./scripts/build/linux/docker-build-linux-zh.sh linux64-deploy
 
 # Native:
 cmake --preset linux64-deploy
@@ -300,7 +323,10 @@ sudo pacman -S alsa-lib
 
 ### Verify Build
 ```bash
-# Verify 64-bit ELF executable
+# Verify build tree exists (after configure)
+test -f build/linux64-deploy/build.ninja && echo "Build tree OK"
+
+# Verify 64-bit ELF executable (after build)
 file build/linux64-deploy/GeneralsMD/GeneralsXZH
 # Should show: ELF 64-bit LSB executable, x86-64
 
@@ -351,7 +377,7 @@ The Linux port **Phase 1 (Graphics) is COMPLETE** ✅
 For Linux build-specific issues, check [Issues](https://github.com/fbraz3/GeneralsX/issues) or open a new one with the `linux` label.
 
 ---
-**Last updated**: February 18, 2026
+**Last updated**: July 1, 2026
 **Target Architecture**: Linux 64-bit (x86_64) native ELF
 **Status**: Phase 1 (Graphics) In progress 🔄
 **Technology**: DXVK (DirectX → Vulkan) + SDL3 + Docker
