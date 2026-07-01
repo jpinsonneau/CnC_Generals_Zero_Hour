@@ -28,7 +28,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
-#include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
 #define DEFINE_TERRAIN_LOD_NAMES
 #define DEFINE_TIME_OF_DAY_NAMES
@@ -36,36 +36,37 @@
 #include "Common/MultiplayerSettings.h"
 #include "Common/INI.h"
 #include "GameNetwork/GameInfo.h" // for PLAYERTEMPLATE_*
+#include <algorithm>
 
 // PUBLIC DATA ////////////////////////////////////////////////////////////////////////////////////
-MultiplayerSettings *TheMultiplayerSettings = NULL;				///< The MultiplayerSettings singleton
+MultiplayerSettings *TheMultiplayerSettings = nullptr;				///< The MultiplayerSettings singleton
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // PRIVATE DATA ///////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-const FieldParse MultiplayerColorDefinition::m_colorFieldParseTable[] = 
+const FieldParse MultiplayerColorDefinition::m_colorFieldParseTable[] =
 {
 
-	{ "TooltipName",	INI::parseAsciiString,	NULL,	offsetof( MultiplayerColorDefinition, m_tooltipName ) },
-	{ "RGBColor",			INI::parseRGBColor,			NULL,	offsetof( MultiplayerColorDefinition, m_rgbValue ) },
-	{ "RGBNightColor",			INI::parseRGBColor,		NULL,	offsetof( MultiplayerColorDefinition, m_rgbValueNight ) },
-	{ NULL,					NULL,						NULL,						0 }  // keep this last
+	{ "TooltipName",	INI::parseAsciiString,	nullptr,	offsetof( MultiplayerColorDefinition, m_tooltipName ) },
+	{ "RGBColor",			INI::parseRGBColor,			nullptr,	offsetof( MultiplayerColorDefinition, m_rgbValue ) },
+	{ "RGBNightColor",			INI::parseRGBColor,		nullptr,	offsetof( MultiplayerColorDefinition, m_rgbValueNight ) },
+	{ nullptr,					nullptr,						nullptr,						0 }
 
 };
 
-const FieldParse MultiplayerSettings::m_multiplayerSettingsFieldParseTable[] = 
+const FieldParse MultiplayerSettings::m_multiplayerSettingsFieldParseTable[] =
 {
 
-	{ "InitialCreditsMin",				INI::parseInt,	NULL,	offsetof( MultiplayerSettings, m_initialCreditsMin ) },
-	{ "InitialCreditsMax",				INI::parseInt,	NULL,	offsetof( MultiplayerSettings, m_initialCreditsMax ) },
-	{ "StartCountdownTimer",			INI::parseInt,	NULL,	offsetof( MultiplayerSettings, m_startCountdownTimerSeconds ) },
-	{ "MaxBeaconsPerPlayer",			INI::parseInt,	NULL,	offsetof( MultiplayerSettings, m_maxBeaconsPerPlayer ) },
-	{ "UseShroud",								INI::parseBool,	NULL,	offsetof( MultiplayerSettings, m_isShroudInMultiplayer ) },
-	{ "ShowRandomPlayerTemplate",	INI::parseBool,	NULL,	offsetof( MultiplayerSettings, m_showRandomPlayerTemplate ) },
-	{ "ShowRandomStartPos",				INI::parseBool,	NULL,	offsetof( MultiplayerSettings, m_showRandomStartPos ) },
-	{ "ShowRandomColor",					INI::parseBool,	NULL,	offsetof( MultiplayerSettings, m_showRandomColor ) },
+	{ "InitialCreditsMin",				INI::parseInt,	nullptr,	offsetof( MultiplayerSettings, m_initialCreditsMin ) },
+	{ "InitialCreditsMax",				INI::parseInt,	nullptr,	offsetof( MultiplayerSettings, m_initialCreditsMax ) },
+	{ "StartCountdownTimer",			INI::parseInt,	nullptr,	offsetof( MultiplayerSettings, m_startCountdownTimerSeconds ) },
+	{ "MaxBeaconsPerPlayer",			INI::parseInt,	nullptr,	offsetof( MultiplayerSettings, m_maxBeaconsPerPlayer ) },
+	{ "UseShroud",								INI::parseBool,	nullptr,	offsetof( MultiplayerSettings, m_isShroudInMultiplayer ) },
+	{ "ShowRandomPlayerTemplate",	INI::parseBool,	nullptr,	offsetof( MultiplayerSettings, m_showRandomPlayerTemplate ) },
+	{ "ShowRandomStartPos",				INI::parseBool,	nullptr,	offsetof( MultiplayerSettings, m_showRandomStartPos ) },
+	{ "ShowRandomColor",					INI::parseBool,	nullptr,	offsetof( MultiplayerSettings, m_showRandomColor ) },
 
-	{ NULL,					NULL,						NULL,						0 }  // keep this last
+	{ nullptr,					nullptr,						nullptr,						0 }
 
 };
 
@@ -74,24 +75,49 @@ const FieldParse MultiplayerSettings::m_multiplayerSettingsFieldParseTable[] =
 MultiplayerSettings::MultiplayerSettings()
 {
 	m_initialCreditsMin = 5000;
-	
-	//Fixed And Added Code By Sadullah Nader
-	//DID U MEAN m_initialCreditsMax = 10000;?
-	//Initializations inserted
 	m_initialCreditsMax = 10000;
 	m_maxBeaconsPerPlayer = 3;
-	//
-
 	m_startCountdownTimerSeconds = 0;
 	m_numColors = 0;
 	m_isShroudInMultiplayer = TRUE;
 	m_showRandomPlayerTemplate = TRUE;
 	m_showRandomStartPos = TRUE;
 	m_showRandomColor = TRUE;
-	
 	m_observerColor;
 	m_randomColor;
-}  // end MultiplayerSettings
+	// GeneralsX @tweak fbraz 30/03/2026 Add larger starting money options to the default list
+	// Ensure these values exist so the UI dropdown includes them even if INI doesn't define them
+	{
+		Money money100k; money100k.setStartingCash(100000);
+		Money money150k; money150k.setStartingCash(150000);
+		Money money200k; money200k.setStartingCash(200000);
+
+		Bool found = FALSE;
+		for (MultiplayerStartingMoneyList::const_iterator it = m_startingMoneyList.begin(); it != m_startingMoneyList.end(); ++it)
+		{
+			if ( it->amountEqual(money100k) ) { found = TRUE; break; }
+		}
+		if (!found) addStartingMoneyChoice(money100k, FALSE);
+
+		found = FALSE;
+		for (MultiplayerStartingMoneyList::const_iterator it = m_startingMoneyList.begin(); it != m_startingMoneyList.end(); ++it)
+		{
+			if ( it->amountEqual(money150k) ) { found = TRUE; break; }
+		}
+		if (!found) addStartingMoneyChoice(money150k, FALSE);
+
+		found = FALSE;
+		for (MultiplayerStartingMoneyList::const_iterator it = m_startingMoneyList.begin(); it != m_startingMoneyList.end(); ++it)
+		{
+			if ( it->amountEqual(money200k) ) { found = TRUE; break; }
+		}
+		if (!found) addStartingMoneyChoice(money200k, FALSE);
+	}
+
+	// Ensure starting money choices are in ascending order for UI presentation
+	std::sort(m_startingMoneyList.begin(), m_startingMoneyList.end(),
+		[](const Money &a, const Money &b) { return a.countMoney() < b.countMoney(); });
+}
 
 MultiplayerColorDefinition::MultiplayerColorDefinition()
 {
@@ -114,7 +140,7 @@ MultiplayerColorDefinition * MultiplayerSettings::getColor(Int which)
 	}
 	else if (which < 0 || which >= getNumColors())
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	return &m_colorList[which];
@@ -132,7 +158,7 @@ MultiplayerColorDefinition * MultiplayerSettings::findMultiplayerColorDefinition
 		++iter;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 MultiplayerColorDefinition * MultiplayerSettings::newMultiplayerColorDefinition(AsciiString name)
@@ -144,6 +170,17 @@ MultiplayerColorDefinition * MultiplayerSettings::newMultiplayerColorDefinition(
 	m_numColors = m_colorList.size();
 
 	return &m_colorList[numColors];
+}
+
+void MultiplayerSettings::addStartingMoneyChoice( const Money & money, Bool isDefault )
+{
+	m_startingMoneyList.push_back( money );
+	if ( isDefault )
+	{
+		DEBUG_ASSERTCRASH( !m_gotDefaultStartingMoney, ("Cannot have more than one default MultiplayerStartingMoneyChoice") );
+		m_defaultStartingMoney = money;
+		m_gotDefaultStartingMoney = true;
+	}
 }
 
 MultiplayerColorDefinition * MultiplayerColorDefinition::operator =(const MultiplayerColorDefinition& other)

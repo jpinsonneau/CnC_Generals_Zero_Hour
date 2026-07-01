@@ -1,59 +1,104 @@
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/fbraz3/GeneralsGameCode)
+[![GeneralsX CI](https://github.com/fbraz3/GeneralsX/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/fbraz3/GeneralsX/actions/workflows/ci.yml)
+[![GitHub Release](https://img.shields.io/github/v/release/fbraz3/GeneralsX?include_prereleases&sort=date&display_name=tag&style=flat&label=Release)](https://github.com/fbraz3/GeneralsX/releases)
 
-# Command & Conquer Generals (inc. Zero Hour) Source Code
+# GeneralsX - Cross-Platform Command & Conquer: Generals
 
-This repository includes source code for Command & Conquer Generals, and its expansion pack Zero Hour. This release provides support to the Steam Workshop for both games ([C&C Generals](https://steamcommunity.com/workshop/browse/?appid=2229870) and [C&C Generals - Zero Hour](https://steamcommunity.com/workshop/browse/?appid=2732960)).
+GeneralsX delivers **Linux and macOS** builds of **Command & Conquer: Generals and Zero Hour** through a single modern codebase.
 
+> Note: This project is not related to any mods with similar names and does not aim to extend or modify gameplay.
 
-## Dependencies
+## How to download
 
-If you wish to rebuild the source code and tools successfully you will need to find or write new replacements (or remove the code using them entirely) for the following libraries;
+For **official releases and instructions**, visit:
 
-- DirectX SDK (Version 9.0 or higher) (expected path `\Code\Libraries\DirectX\`)
-- STLport (4.5.3) - (expected path `\Code\Libraries\STLport-4.5.3`)
-- 3DSMax 4 SDK - (expected path `\Code\Libraries\Max4SDK\`)
-- NVASM - (expected path `\Code\Tools\NVASM\`)
-- BYTEmark - (expected path `\Code\Libraries\Source\Benchmark`)
-- RAD Miles Sound System SDK - (expected path `\Code\Libraries\Source\WWVegas\Miles6\`)
-- RAD Bink SDK - (expected path `\Code\GameEngineDevice\Include\VideoDevice\Bink`)
-- SafeDisk API - (expected path `\Code\GameEngine\Include\Common\SafeDisk` and `\Code\Tools\Launcher\SafeDisk\`)
-- Miles Sound System "Asimp3" - (expected path `\Code\Libraries\WPAudio\Asimp3`)
-- GameSpy SDK - (expected path `\Code\Libraries\Source\GameSpy\`)
-- ZLib (1.1.4) - (expected path `\Code\Libraries\Source\Compression\ZLib\`)
-- LZH-Light (1.0) - (expected path `\Code\Libraries\Source\Compression\LZHCompress\CompLibSource` and `CompLibHeader`)
+* [GeneralsX Releases](https://github.com/fbraz3/GeneralsX/releases)  - Linux and Mac
+* [TheSuperHackers Releases](https://github.com/TheSuperHackers/GeneralsGameCode/releases) - Windows
+* [Fighter19 Releases](https://github.com/Fighter19/CnC_Generals_Zero_Hour/releases) - Original Linux-focused Zero Hour reference releases
 
+> See our [Tutorial Docs](docs/HOWTO/README.md) for step-by-step guides.
 
-## Compiling (Win32 Only)
+## Where does the GeneralsX name come from?
 
-To use the compiled binaries, you must own the game. The C&C Ultimate Collection is available for purchase on [EA App](https://www.ea.com/en-gb/games/command-and-conquer/command-and-conquer-the-ultimate-collection/buy/pc) or [Steam](https://store.steampowered.com/bundle/39394/Command__Conquer_The_Ultimate_Collection/).
+There are two reasons for this name:
 
-The quickest way to build all configurations in the project is to open `rts.dsw` in Microsoft Visual Studio C++ 6.0 (SP6 recommended for binary matching to Generals patch 1.08 and Zero Hour patch 1.04) and select Build -> Batch Build, then hit the “Rebuild All” button.
+1. X = Cross - reflects the cross-platform efforts
+2. I am a big fan of the Mega Man X franchise, so this is also a tribute to that classic series.
 
-If you wish to compile the code under a modern version of Microsoft Visual Studio, you can convert the legacy project file to a modern MSVC solution by opening `rts.dsw` in Microsoft Visual Studio .NET 2003, and then opening the newly created project and solution file in MSVC 2015 or newer.
+## Project Goals
 
-NOTE: As modern versions of MSVC enforce newer revisions of the C++ standard, you will need to make extensive changes to the codebase before it successfully compiles, even more so if you plan on compiling for the Win64 platform.
+GeneralsX exists to turn upstream preservation and porting work into a practical and maintainable project for active Linux and macOS players.
 
-When the workspace has finished building, the compiled binaries will be copied to the folder called `/Run/` found in the root of each games directory. 
+Its main goals are:
 
+- Preserve retail gameplay behavior while modernizing the platform layer.
+- Maintain a **single codebase** with Linux and macOS as the active targets, while keeping a future Windows path possible.
+- Carry the adaptation work needed to make the stack function in practice across supported platforms, including repository-specific fixes when upstream constraints leave gaps.
+- Deliver reproducible builds, packaging, and release workflows that make the port usable beyond local development setups.
+- Replace the original Windows-only DirectX 8 / Miles stack with portable open-source equivalents where appropriate.
+- Keep upstream lineage clear by distinguishing foundational work from the integration, packaging, and platform support specific to GeneralsX.
 
-## Known Issues
+To stay up to date on project status, visit our [Dev Blog](docs/DEV_BLOG/).
 
-Windows has a policy where executables that contain words “version”, “update” or “install” in their filename will require UAC Elevation to run. This will affect “versionUpdate” and “buildVersionUpdate” projects from running as post-build events. Renaming the output binary name for these projects to not include these words should resolve the issue for you.
+## How does this project relate to other community projects?
 
+GeneralsX builds on complementary community efforts with different roles.
 
-## STLport
-STLport will require changes to successfully compile this source code. The file [stlport.diff](stlport.diff) has been provided for you so you can review and apply these changes. Please make sure you are using STLport 4.5.3 before attempting to apply the patch.
+**TheSuperHackers** provides the main upstream foundation for stability, bug fixes, retail compatibility, and long-term maintenance of the original game code.
 
+**Fighter19's fork**, including major work by **feliwir**, is a key Zero Hour cross-platform reference that established much of the ecosystem groundwork used here, including SDL3 windowing, DXVK-based rendering, OpenAL audio, FFmpeg media support, filesystem modernization, and related Linux-focused portability work.
 
-## Contributing
+While GeneralsX builds on important community work, this project also includes substantial original effort in integration, adaptation, platform-specific fixes, enhancements, testing, packaging, and ongoing maintenance.
 
-This repository will not be accepting contributions (pull requests, issues, etc). If you wish to create changes to the source code and encourage collaboration, please create a fork of the repository under your GitHub user/organization space.
+Because these projects serve different but complementary goals, not every change belongs in the same place. Improvements aligned with upstream stability or core maintenance priorities should be contributed back to TheSuperHackers, while GeneralsX keeps changes specific to cross-platform delivery, packaging, and platform integration.
 
+## 💖 Support This Project
 
-## Support
+The optional sponsorship link exists to help cover the maintenance costs specific to GeneralsX: Linux/macOS integration, project-specific adaptation work, testing infrastructure, packaging, tooling, release work, and documentation.
 
-This repository is for preservation purposes only and is archived without support. 
+- **[Sponsor on GitHub](https://github.com/sponsors/fbraz3)**
 
+Your support specifically helps with:
 
-## License
+- **Integration, Adaptation and Enhancements** - Merging reference work, resolving incompatibilities, and carrying project-specific fixes needed for supported platforms
+- **Testing Infrastructure** - Validation across Linux and macOS, plus exploratory work needed to keep future platform paths viable
+- **Packaging & Releases** - AppImage, Flatpak, macOS bundles, CI pipeline
+- **Documentation & Maintenance** - Build guides, installation instructions, developer resources, and ongoing repository upkeep
 
-This repository and its contents are licensed under the GPL v3 license, with additional terms applied. Please see [LICENSE.md](LICENSE.md) for details.
+Please also consider supporting the upstream community efforts that made this possible:
+
+- [TheSuperHackers/GeneralsGameCode](https://github.com/TheSuperHackers/GeneralsGameCode)
+- [Fighter19/CnC_Generals_Zero_Hour](https://github.com/Fighter19/CnC_Generals_Zero_Hour)
+
+##  Building from Source
+
+- [ Linux Build Guide](docs/BUILD/LINUX.md)
+- [ macOS Build Guide](docs/BUILD/MACOS.md)
+
+###  Known Issues & Limitations
+
+For documented limitations and known bugs, check the [issues page](https://github.com/fbraz3/GeneralsX/issues).
+
+---
+
+## 🤝 How to Contribute
+
+1. Check [current issues](https://github.com/fbraz3/GeneralsX/issues) and [GitHub discussions](https://github.com/fbraz3/GeneralsX/discussions)
+2. Read platform-specific build guides ([Windows](docs/ETC/), [macOS](docs/BUILD/MACOS.md), [Linux](docs/BUILD/LINUX.md))
+3. Follow [CONTRIBUTING.md](CONTRIBUTING.md) guidelines
+4. Submit issues or pull requests with detailed information
+
+## 🙏 Special Thanks
+
+- **[Westwood Studios](https://cnc-comm.com/westwood-studios)** for creating the legendary Command & Conquer series
+- **[EA Games](https://www.ea.com/)** for Command & Conquer: Generals, which continues to inspire gaming communities
+- **[TheSuperHackers / Xezon](https://github.com/TheSuperHackers/GeneralsGameCode)** and contributors for the upstream stability, bug fixes, and code modernization that form the foundation of GeneralsX
+- **[Fighter19](https://github.com/Fighter19)** for the cross-platform port that pioneered SDL3 windowing, DXVK graphics, and MinGW build support on Linux
+- **[feliwir](https://github.com/feliwir)** for the foundational cross-platform systems implemented in Fighter19's fork: OpenAL audio, FFmpeg video decoding, C++17 filesystem, and Freetype/Fontconfig text rendering
+- **All contributors and sponsors** for helping to make this game truly cross-platform and accessible worldwide
+
+## 📄 License
+
+See the [LICENSE](./LICENSE.md) file for details.
+
+EA has not endorsed and does not support this product. All trademarks are the property of their respective owners.

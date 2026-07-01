@@ -27,19 +27,25 @@
 #include "Common/BezierSegment.h"
 #include "Common/BezFwdIterator.h"
 
-#include <D3DX8Math.h>
+#ifdef _WIN32
+#include <d3dx8math.h>
+#elif defined(SAGE_USE_GLM)
+#include <glm/glm.hpp>
+#else
+#error "Missing a math library"
+#endif
 
 //-------------------------------------------------------------------------------------------------
 BezierSegment::BezierSegment()
-{ 
+{
 	for(int i=0; i < 4; i++)
 		m_controlPoints[i].zero();
 }
 
 //-------------------------------------------------------------------------------------------------
-BezierSegment::BezierSegment(Real x0, Real y0, Real z0, 
-														 Real x1, Real y1, Real z1, 
-														 Real x2, Real y2, Real z2, 
+BezierSegment::BezierSegment(Real x0, Real y0, Real z0,
+														 Real x1, Real y1, Real z1,
+														 Real x2, Real y2, Real z2,
 														 Real x3, Real y3, Real z3)
 {
 	m_controlPoints[0].x = x0;
@@ -102,6 +108,7 @@ void BezierSegment::evaluateBezSegmentAtT(Real tValue, Coord3D *outResult) const
 	if (!outResult)
 		return;
 
+#ifndef SAGE_USE_GLM
 	D3DXVECTOR4	tVec(tValue * tValue * tValue, tValue * tValue, tValue, 1);
 
 	D3DXVECTOR4 xCoords(m_controlPoints[0].x, m_controlPoints[1].x, m_controlPoints[2].x, m_controlPoints[3].x);
@@ -110,10 +117,23 @@ void BezierSegment::evaluateBezSegmentAtT(Real tValue, Coord3D *outResult) const
 
 	D3DXVECTOR4 tResult;
 	D3DXVec4Transform(&tResult, &tVec, &BezierSegment::s_bezBasisMatrix);
-	
+
 	outResult->x = D3DXVec4Dot(&xCoords, &tResult);
 	outResult->y = D3DXVec4Dot(&yCoords, &tResult);
 	outResult->z = D3DXVec4Dot(&zCoords, &tResult);
+#else // SAGE_USE_GLM
+	glm::vec4 tVec(tValue * tValue * tValue, tValue * tValue, tValue, 1);
+
+	glm::vec4 xCoords(m_controlPoints[0].x, m_controlPoints[1].x, m_controlPoints[2].x, m_controlPoints[3].x);
+	glm::vec4 yCoords(m_controlPoints[0].y, m_controlPoints[1].y, m_controlPoints[2].y, m_controlPoints[3].y);
+	glm::vec4 zCoords(m_controlPoints[0].z, m_controlPoints[1].z, m_controlPoints[2].z, m_controlPoints[3].z);
+
+	glm::vec4 tResult = BezierSegment::s_bezBasisMatrix * tVec;
+
+	outResult->x = glm::dot(xCoords, tResult);
+	outResult->y = glm::dot(yCoords, tResult);
+	outResult->z = glm::dot(zCoords, tResult);
+#endif
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -122,7 +142,7 @@ void BezierSegment::getSegmentPoints(Int numSegments, VecCoord3D *outResult) con
 	if (!outResult) {
 		return;
 	}
-	
+
 	outResult->clear();
 	outResult->resize(numSegments);
 
@@ -137,24 +157,24 @@ void BezierSegment::getSegmentPoints(Int numSegments, VecCoord3D *outResult) con
 }
 
 //-------------------------------------------------------------------------------------------------
-// This function isn't terribly fast. There are alternatives, and if this is too slow, we can 
+// This function isn't terribly fast. There are alternatives, and if this is too slow, we can
 // take a look at the other approximations.
 // There is no known close-form solution to this problem.
 Real BezierSegment::getApproximateLength(Real withinTolerance) const
 {
 	/*
 		How this works:
-		We can determine the approximate length of a bezier segment by 
-		L0 = |(P0,P1)| + |(P1,P2)| + |(P2,P3)| 
+		We can determine the approximate length of a bezier segment by
+		L0 = |(P0,P1)| + |(P1,P2)| + |(P2,P3)|
 		L1 = |(P0,P3)|
-		
+
 		The length of the segment is approximately 1/2 L0 + 1/2 L1
 
 		P1__P2
 		/		 \
 	 P0----P3
 
-		The error in this is L1 - L0. If the error is too much, then we subdivide the curve and 
+		The error in this is L1 - L0. If the error is too much, then we subdivide the curve and
 		try again.
 	*/
 
@@ -211,12 +231,12 @@ void BezierSegment::splitSegmentAtT(Real tValue, BezierSegment &outSeg1, BezierS
 	p1p2.add(&m_controlPoints[1]);
 	p2p3.add(&m_controlPoints[2]);
 
-	Coord3D triLeft = { p1p2.x - p0p1.x, 
-											p1p2.y - p0p1.y, 
+	Coord3D triLeft = { p1p2.x - p0p1.x,
+											p1p2.y - p0p1.y,
 											p1p2.z - p0p1.z, };
 
-	Coord3D triRight = { p2p3.x - p1p2.x, 
-											 p2p3.y - p1p2.y, 
+	Coord3D triRight = { p2p3.x - p1p2.x,
+											 p2p3.y - p1p2.y,
 											 p2p3.z - p1p2.z, };
 
 	triLeft.scale(tValue);
@@ -233,14 +253,23 @@ void BezierSegment::splitSegmentAtT(Real tValue, BezierSegment &outSeg1, BezierS
 	outSeg2.m_controlPoints[0] = outSeg1.m_controlPoints[3];
 	outSeg2.m_controlPoints[1] = triRight;
 	outSeg2.m_controlPoints[2] = p2p3;
-	outSeg2.m_controlPoints[3] = m_controlPoints[3];	
+	outSeg2.m_controlPoints[3] = m_controlPoints[3];
 }
 
 //-------------------------------------------------------------------------------------------------
 // The Basis Matrix for a bezier segment
+#ifndef SAGE_USE_GLM
 const D3DXMATRIX BezierSegment::s_bezBasisMatrix(
 	-1.0f,  3.0f, -3.0f,  1.0f,
 	 3.0f, -6.0f,  3.0f,  0.0f,
 	-3.0f,  3.0f,  0.0f,  0.0f,
 	 1.0f,  0.0f,  0.0f,  0.0f
 );
+#else
+const glm::mat4 BezierSegment::s_bezBasisMatrix(
+	-1.0f,  3.0f, -3.0f,  1.0f,
+	 3.0f, -6.0f,  3.0f,  0.0f,
+	-3.0f,  3.0f,  0.0f,  0.0f,
+	 1.0f,  0.0f,  0.0f,  0.0f
+);
+#endif

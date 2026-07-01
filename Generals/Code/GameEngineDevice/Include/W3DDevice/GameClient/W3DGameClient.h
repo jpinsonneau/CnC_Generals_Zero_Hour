@@ -24,8 +24,8 @@
 
 // FILE: W3DGameClient.h ///////////////////////////////////////////////////
 //
-// W3D implementation of the game interface.  The GameClient is 
-// responsible for maintaining our drawbles, handling our GUI, and creating
+// W3D implementation of the game interface.  The GameClient is
+// responsible for maintaining our drawables, handling our GUI, and creating
 // the display ... basically the Client if this were a Client/Server game.
 //
 // Author: Colin Day, April 2001
@@ -33,9 +33,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #pragma once
-
-#ifndef __W3DGAMEINTERFACE_H_
-#define __W3DGAMEINTERFACE_H_
 
 // SYSTEM INCLUDES ////////////////////////////////////////////////////////////
 
@@ -49,10 +46,21 @@
 #include "W3DDevice/GameClient/W3DGameFont.h"
 #include "W3DDevice/GameClient/W3DDisplayStringManager.h"
 #include "VideoDevice/Bink/BinkVideoPlayer.h"
+#ifdef RTS_HAS_FFMPEG
+#include "VideoDevice/FFmpeg/FFmpegVideoPlayer.h"
+#endif
 #include "Win32Device/GameClient/Win32DIKeyboard.h"
 #include "Win32Device/GameClient/Win32DIMouse.h"
 #include "Win32Device/GameClient/Win32Mouse.h"
 #include "W3DDevice/GameClient/W3DMouse.h"
+
+// GeneralsX @build BenderAI 10/03/2026 - Phase 1.5 SDL3 input devices
+#ifndef _WIN32
+#include <cstdlib>
+#include "SDL3Device/GameClient/SDL3Mouse.h"
+#include "SDL3Device/GameClient/SDL3Keyboard.h"
+#include "SDL3GameEngine.h"  // For getSDLWindow()
+#endif
 
 class ThingTemplate;
 
@@ -71,60 +79,81 @@ class W3DGameClient : public GameClient
 public:
 
 	W3DGameClient();
-	virtual ~W3DGameClient();
+	virtual ~W3DGameClient() override;
 
 	/// given a type, create a drawable
-	virtual Drawable *friend_createDrawable( const ThingTemplate *thing, DrawableStatus statusBits = DRAWABLE_STATUS_NONE );
+	virtual Drawable *friend_createDrawable( const ThingTemplate *thing, DrawableStatusBits statusBits = DRAWABLE_STATUS_DEFAULT ) override;
 
-	virtual void init( void );		///< initialize resources
-	virtual void update( void );  ///< per frame update
-	virtual void reset( void );   ///< reset system
-		
-	virtual void addScorch(const Coord3D *pos, Real radius, Scorches type);
-	virtual void createRayEffectByTemplate( const Coord3D *start, const Coord3D *end, const ThingTemplate* tmpl );  ///< create effect needing start and end location
+	virtual void init() override;		///< initialize resources
+	virtual void update() override;  ///< per frame update
+	virtual void reset() override;   ///< reset system
+
+	virtual void addScorch(const Coord3D *pos, Real radius, Scorches type) override;
+	virtual void createRayEffectByTemplate( const Coord3D *start, const Coord3D *end, const ThingTemplate* tmpl ) override;  ///< create effect needing start and end location
 	//virtual Bool getBonePos(Drawable *draw, AsciiString boneName, Coord3D* pos, Matrix3D* transform) const;
 
-	virtual void setTimeOfDay( TimeOfDay tod );							///< Tell all the drawables what time of day it is now
+	virtual void setTimeOfDay( TimeOfDay tod ) override;							///< Tell all the drawables what time of day it is now
 
 	//---------------------------------------------------------------------------
-	virtual void setTeamColor( Int red, Int green, Int blue );  ///< @todo superhack for demo, remove!!!
-	virtual void adjustLOD( Int adj ); ///< @todo hack for evaluation, remove.
+	virtual void setTeamColor( Int red, Int green, Int blue ) override;  ///< @todo superhack for demo, remove!!!
+	virtual void setTextureLOD( Int level ) override;
 
 protected:
 
-	virtual Keyboard *createKeyboard( void );								///< factory for the keyboard
-	virtual Mouse *createMouse( void );											///< factory for the mouse
+	virtual Keyboard *createKeyboard() override;								///< factory for the keyboard
+	virtual Mouse *createMouse() override;											///< factory for the mouse
 
 	/// factory for creating TheDisplay
-	virtual Display *createGameDisplay( void ) { return NEW W3DDisplay; }
+	virtual Display *createGameDisplay() override { return NEW W3DDisplay; }
 
 	/// factory for creating TheInGameUI
-	virtual InGameUI *createInGameUI( void ) { return NEW W3DInGameUI; }	
+	virtual InGameUI *createInGameUI() override { return NEW W3DInGameUI; }
 
 	/// factory for creating the window manager
-	virtual GameWindowManager *createWindowManager( void ) { return NEW W3DGameWindowManager; }
+	virtual GameWindowManager *createWindowManager() override { return NEW W3DGameWindowManager; }
 
 	/// factory for creating the font library
-	virtual FontLibrary *createFontLibrary( void ) { return NEW W3DFontLibrary; }
+	virtual FontLibrary *createFontLibrary() override { return NEW W3DFontLibrary; }
 
   /// Manager for display strings
-	virtual DisplayStringManager *createDisplayStringManager( void ) { return NEW W3DDisplayStringManager; }
+	virtual DisplayStringManager *createDisplayStringManager() override { return NEW W3DDisplayStringManager; }
 
-	virtual VideoPlayerInterface *createVideoPlayer( void ) { return NEW BinkVideoPlayer; }
+#ifdef RTS_HAS_FFMPEG
+	virtual VideoPlayerInterface *createVideoPlayer() override { return NEW FFmpegVideoPlayer; }
+#else
+	virtual VideoPlayerInterface *createVideoPlayer() override { return NEW BinkVideoPlayer; }
+#endif
 	/// factory for creating the TerrainVisual
-	virtual TerrainVisual *createTerrainVisual( void ) { return NEW W3DTerrainVisual; }
+	virtual TerrainVisual *createTerrainVisual() override { return NEW W3DTerrainVisual; }
 
-	virtual void setFrameRate(Real msecsPerFrame) { TheW3DFrameLengthInMsec = msecsPerFrame; }
+	virtual void setFrameRate(Real msecsPerFrame) override { TheW3DFrameLengthInMsec = msecsPerFrame; }
 
-};  // end class W3DGameClient
+};
 
-inline Keyboard *W3DGameClient::createKeyboard( void ) { return NEW DirectInputKeyboard; }
-inline Mouse *W3DGameClient::createMouse( void )
+// GeneralsX @build BenderAI 10/03/2026 - Phase 1.5 SDL3 input factory wiring
+inline Keyboard *W3DGameClient::createKeyboard( void ) {
+#ifndef _WIN32
+	return NEW SDL3Keyboard();  // Linux: SDL3 keyboard
+#else
+	return NEW DirectInputKeyboard;  // Windows: DirectInput keyboard
+#endif
+}
+
+inline Mouse *W3DGameClient::createMouse()
 {
-	//return new DirectInputMouse;
+// GeneralsX @bugfix BenderAI 14/03/2026 SDL3 mouse creation must fail fast instead of returning nullptr.
+#ifndef _WIN32
+	// Linux: SDL3 mouse requires the pre-initialized SDL3GameEngine window.
+	SDL3GameEngine* sdlEngine = dynamic_cast<SDL3GameEngine*>(TheGameEngine);
+	if (sdlEngine && sdlEngine->getSDLWindow()) {
+		return NEW SDL3Mouse(sdlEngine->getSDLWindow());
+	}
+	fprintf(stderr, "FATAL: W3DGameClient::createMouse() requires SDL3GameEngine with an initialized SDL window\n");
+	std::abort();
+#else
+	// Windows: W3DMouse (wraps Win32Mouse with 3D cursor)
 	Win32Mouse * mouse = NEW W3DMouse;
 	TheWin32Mouse = mouse;   ///< global cheat for the WndProc()
 	return mouse;
+#endif
 }
-
-#endif  // end __W3DGAMEINTERFACE_H_

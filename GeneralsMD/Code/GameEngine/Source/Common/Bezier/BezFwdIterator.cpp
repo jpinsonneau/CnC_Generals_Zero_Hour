@@ -27,30 +27,26 @@
 
 //-------------------------------------------------------------------------------------------------
 BezFwdIterator::BezFwdIterator(): mStep(0), mStepsDesired(0)
-{ 
-	// Added by Sadullah Nader
+{
 	mCurrPoint.zero();
 	mDDDq.zero();
 	mDDq.zero();
 	mDq.zero();
-} 
+}
 
 //-------------------------------------------------------------------------------------------------
 BezFwdIterator::BezFwdIterator(Int stepsDesired, const BezierSegment *bezSeg)
 {
-	// Added by Sadullah Nader
 	mCurrPoint.zero();
 	mDDDq.zero();
 	mDDq.zero();
 	mDq.zero();
-	//
-
 	mStepsDesired = stepsDesired;
 	mBezSeg = (*bezSeg);
 }
 
 //-------------------------------------------------------------------------------------------------
-void BezFwdIterator::start(void)
+void BezFwdIterator::start()
 {
 	mStep = 0;
 
@@ -61,6 +57,8 @@ void BezFwdIterator::start(void)
 	float d2 = d * d;
 	float d3 = d * d2;
 
+// TheSuperHackers @build fighter19 11/02/2026 Add GLM conditional compilation for Linux DXVK compatibility
+#ifndef SAGE_USE_GLM
 	D3DXVECTOR4 px(mBezSeg.m_controlPoints[0].x, mBezSeg.m_controlPoints[1].x, mBezSeg.m_controlPoints[2].x, mBezSeg.m_controlPoints[3].x);
 	D3DXVECTOR4 py(mBezSeg.m_controlPoints[0].y, mBezSeg.m_controlPoints[1].y, mBezSeg.m_controlPoints[2].y, mBezSeg.m_controlPoints[3].y);
 	D3DXVECTOR4 pz(mBezSeg.m_controlPoints[0].z, mBezSeg.m_controlPoints[1].z, mBezSeg.m_controlPoints[2].z, mBezSeg.m_controlPoints[3].z);
@@ -69,6 +67,16 @@ void BezFwdIterator::start(void)
 	D3DXVec4Transform(&cVec[0], &px, &BezierSegment::s_bezBasisMatrix);
 	D3DXVec4Transform(&cVec[1], &py, &BezierSegment::s_bezBasisMatrix);
 	D3DXVec4Transform(&cVec[2], &pz, &BezierSegment::s_bezBasisMatrix);
+#else // SAGE_USE_GLM
+	glm::vec4 px(mBezSeg.m_controlPoints[0].x, mBezSeg.m_controlPoints[1].x, mBezSeg.m_controlPoints[2].x, mBezSeg.m_controlPoints[3].x);
+	glm::vec4 py(mBezSeg.m_controlPoints[0].y, mBezSeg.m_controlPoints[1].y, mBezSeg.m_controlPoints[2].y, mBezSeg.m_controlPoints[3].y);
+	glm::vec4 pz(mBezSeg.m_controlPoints[0].z, mBezSeg.m_controlPoints[1].z, mBezSeg.m_controlPoints[2].z, mBezSeg.m_controlPoints[3].z);
+
+	glm::vec4 cVec[3];
+	cVec[0] = BezierSegment::s_bezBasisMatrix * px;
+	cVec[1] = BezierSegment::s_bezBasisMatrix * py;
+	cVec[2] = BezierSegment::s_bezBasisMatrix * pz;
+#endif
 
 	mCurrPoint = mBezSeg.m_controlPoints[0];
 
@@ -101,19 +109,19 @@ void BezFwdIterator::start(void)
 }
 
 //-------------------------------------------------------------------------------------------------
-Bool BezFwdIterator::done(void)
+Bool BezFwdIterator::done()
 {
 	return (mStep >= mStepsDesired);
 }
 
 //-------------------------------------------------------------------------------------------------
-const Coord3D& BezFwdIterator::getCurrent(void) const
+const Coord3D& BezFwdIterator::getCurrent() const
 {
 	return mCurrPoint;
 }
 
 //-------------------------------------------------------------------------------------------------
-void BezFwdIterator::next(void)
+void BezFwdIterator::next()
 {
 	mCurrPoint.add(&mDq);
 	mDq.add(&mDDq);
