@@ -3817,7 +3817,12 @@ void ControlBar::setFullViewportHeight()
 
 void ControlBar::setScaledViewportHeight()
 {
-	TheTacticalView->setHeight(TheDisplay->getHeight() * TheGlobalData->m_viewportHeightScale);
+	Real heightScale = TheGlobalData->m_viewportHeightScale;
+	// GeneralsX @feature GitHubCopilot 01/07/2026 Keep full viewport height on ultrawide so the world renders behind HUD side margins.
+	if( TheDisplay && TheDisplay->usesUltrawideHudCentering( DEFAULT_DISPLAY_WIDTH, DEFAULT_DISPLAY_HEIGHT ) ) {
+		heightScale = 1.0f;
+	}
+	TheTacticalView->setHeight( TheDisplay->getHeight() * heightScale );
 }
 
 // GeneralsX @bugfix w1semannn 07/06/2026 Fix tooltip height clipping with Unicode fonts (Issue #153)

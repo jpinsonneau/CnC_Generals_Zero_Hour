@@ -271,6 +271,9 @@ public:
 private:
 	ControlBarScheme *m_currentScheme;													///< the current scheme that everythign uses
 	Coord2D m_multiplier;
+	Int m_uiOffsetX;																				///< horizontal centering offset for ultrawide HUD layout
+
+	void updateUILayoutForScheme(ControlBarScheme *scheme);
 
 	typedef std::list< ControlBarScheme* > ControlBarSchemeList;			///< list of control bar schemes
 	ControlBarSchemeList m_schemeList;

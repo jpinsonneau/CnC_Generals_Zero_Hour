@@ -590,10 +590,41 @@ static void SDL3_ApplyWindowModeForRenderConfig(Bool windowed, Int renderWidth, 
 }
 #endif
 
-// Filtered resolution cache — built once, clamps widths to 4:3..16:9 and deduplicates.
+// Filtered resolution cache — built once, clamps widths to 4:3..32:9 and deduplicates.
 struct FilteredRes { Int w, h, bits; };
 static std::vector<FilteredRes> s_filteredResolutions;
 static bool s_filteredDirty = true;
+
+// GeneralsX @feature GitHubCopilot 01/07/2026 Allow ultrawide resolutions (e.g. 3440x1440) in options list.
+static const Int kMinDisplayAspectNum = 4;
+static const Int kMinDisplayAspectDen = 3;
+static const Int kMaxDisplayAspectNum = 32;
+static const Int kMaxDisplayAspectDen = 9;
+
+static bool tryAddFilteredResolution(Int w, Int h, Int bits, Int nativeH)
+{
+	if (w < DEFAULT_DISPLAY_WIDTH || h <= 0 || bits < 24) {
+		return false;
+	}
+	if (nativeH > 0 && h > nativeH) {
+		return false;
+	}
+	const Int minW = h * kMinDisplayAspectNum / kMinDisplayAspectDen;
+	const Int maxW = h * kMaxDisplayAspectNum / kMaxDisplayAspectDen;
+	if (w < minW) {
+		w = minW;
+	}
+	if (w > maxW) {
+		w = maxW;
+	}
+	for (const auto& entry : s_filteredResolutions) {
+		if (entry.w == w && entry.h == h && entry.bits == bits) {
+			return false;
+		}
+	}
+	s_filteredResolutions.push_back({ w, h, bits });
+	return true;
+}
 
 static void buildFilteredResolutions()
 {
@@ -607,20 +638,17 @@ static void buildFilteredResolutions()
 
 	for (int i = 0; i < resolutions.Count(); i++) {
 		if (!isResolutionSupported(resolutions[i])) continue;
-		Int w = resolutions[i].Width;
-		Int h = resolutions[i].Height;
-		Int bits = resolutions[i].BitDepth;
-		if (nativeH > 0 && h > nativeH) continue;
-		Int minW = h * 4 / 3;
-		Int maxW = h * 16 / 9;
-		if (w < minW) w = minW;
-		if (w > maxW) w = maxW;
-		bool duplicate = false;
-		for (const auto& e : s_filteredResolutions) {
-			if (e.w == w && e.h == h && e.bits == bits) { duplicate = true; break; }
-		}
-		if (!duplicate) s_filteredResolutions.push_back({w, h, bits});
+		tryAddFilteredResolution(resolutions[i].Width, resolutions[i].Height, resolutions[i].BitDepth, nativeH);
 	}
+
+	// DXVK may omit uncommon modes from adapter enumeration; inject known ultrawide targets for windowed play.
+	static const struct { Int w, h; } kSupplementalResolutions[] = {
+		{ 3440, 1440 },
+	};
+	for (const auto& res : kSupplementalResolutions) {
+		tryAddFilteredResolution(res.w, res.h, 32, nativeH);
+	}
+
 	s_filteredDirty = false;
 }
 

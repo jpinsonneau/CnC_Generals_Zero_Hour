@@ -157,6 +157,45 @@ const char *const WindowStyleNames[] = { "PUSHBUTTON",	"RADIOBUTTON",	"CHECKBOX"
 static GameWindow *windowStack[ WIN_STACK_DEPTH ];
 static GameWindow **stackPtr;
 
+// GeneralsX @feature GitHubCopilot 01/07/2026 Centered uniform scaling for in-game HUD .wnd layouts on ultrawide.
+static Bool s_parsingUltrawideHudLayout = FALSE;
+
+static Bool isUltrawideHudLayoutScript( const char *filepath )
+{
+	if( filepath == nullptr ) {
+		return FALSE;
+	}
+
+	const char *base = filepath;
+	for( const char *c = filepath; *c != '\0'; ++c ) {
+		if( *c == '\\' || *c == '/' ) {
+			base = c + 1;
+		}
+	}
+
+	static const char * const kHudLayouts[] = {
+		"ControlBar.wnd",
+		"GeneralsExpPoints.wnd",
+		"ControlBarPopupDescription.wnd",
+		nullptr
+	};
+
+	for( Int i = 0; kHudLayouts[i] != nullptr; ++i ) {
+		if( stricmp( base, kHudLayouts[i] ) == 0 ) {
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
+class UltrawideHudLayoutParseScope
+{
+public:
+	UltrawideHudLayoutParseScope( Bool active ) { s_parsingUltrawideHudLayout = active; }
+	~UltrawideHudLayoutParseScope() { s_parsingUltrawideHudLayout = FALSE; }
+};
+
 // for parsing
 static const char *seps = " =;\n\r\t";
 WinDrawData enabledDropDownButtonDrawData[ MAX_DRAW_DATA ];  ///< for combo boxes
@@ -524,12 +563,27 @@ static Bool parseScreenRect( const char *token, char *buffer,
 	// shrink or expand the screen region by the ratio of the current
 	// resolution divided by the creation resolution
 	//
-	Real xScale = (Real)TheDisplay->getWidth() / (Real)createRes.x;
-	Real yScale = (Real)TheDisplay->getHeight() / (Real)createRes.y;
-	screenRegion.lo.x = (Int)((Real)screenRegion.lo.x * xScale);
-	screenRegion.lo.y = (Int)((Real)screenRegion.lo.y * yScale);
-	screenRegion.hi.x = (Int)((Real)screenRegion.hi.x * xScale);
-	screenRegion.hi.y = (Int)((Real)screenRegion.hi.y * yScale);
+	const Real xScale = (Real)TheDisplay->getWidth() / (Real)createRes.x;
+	const Real yScale = (Real)TheDisplay->getHeight() / (Real)createRes.y;
+	// In-game HUD layouts: uniform scale and horizontal centering on ultrawide.
+	if( s_parsingUltrawideHudLayout && TheDisplay != nullptr ) {
+		Real posScaleX = 1.0f;
+		Real posScaleY = 1.0f;
+		Real sizeScaleX = 1.0f;
+		Real sizeScaleY = 1.0f;
+		Int uiOffsetX = 0;
+		Int uiOffsetY = 0;
+		TheDisplay->computeUILayoutScale(createRes.x, createRes.y, posScaleX, posScaleY, sizeScaleX, sizeScaleY, uiOffsetX, uiOffsetY);
+		screenRegion.lo.x = (Int)((Real)screenRegion.lo.x * posScaleX) + uiOffsetX;
+		screenRegion.lo.y = (Int)((Real)screenRegion.lo.y * posScaleY) + uiOffsetY;
+		screenRegion.hi.x = (Int)((Real)screenRegion.hi.x * posScaleX) + uiOffsetX;
+		screenRegion.hi.y = (Int)((Real)screenRegion.hi.y * posScaleY) + uiOffsetY;
+	} else {
+		screenRegion.lo.x = (Int)((Real)screenRegion.lo.x * xScale);
+		screenRegion.lo.y = (Int)((Real)screenRegion.lo.y * yScale);
+		screenRegion.hi.x = (Int)((Real)screenRegion.hi.x * xScale);
+		screenRegion.hi.y = (Int)((Real)screenRegion.hi.y * yScale);
+	}
 
 	//
 	// given the screen region upper left compute the upper left that we
@@ -2724,6 +2778,8 @@ GameWindow *GameWindowManager::winCreateFromScript( AsciiString filenameString,
 		snprintf( filepath, ARRAY_SIZE(filepath), "Window\\%s", filename );
 	else
 		strlcpy(filepath, filename, ARRAY_SIZE(filepath));
+
+	UltrawideHudLayoutParseScope ultrawideHudLayoutScope( isUltrawideHudLayoutScript( filepath ) );
 
   // Open the input file
 	inFile = TheFileSystem->openFile(filepath, File::READ);

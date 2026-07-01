@@ -170,6 +170,52 @@ Bool Display::setDisplayMode( UnsignedInt xres, UnsignedInt yres, UnsignedInt bi
 	return TRUE;
 }
 
+// GeneralsX @feature GitHubCopilot 01/07/2026 Ultrawide: uniform UI scale centered on screen; 3D view uses full display behind margins.
+void Display::computeUILayoutScale(Int designWidth, Int designHeight, Real& outPosScaleX, Real& outPosScaleY,
+	Real& outSizeScaleX, Real& outSizeScaleY, Int& outOffsetX, Int& outOffsetY) const
+{
+	outPosScaleX = 1.0f;
+	outPosScaleY = 1.0f;
+	outSizeScaleX = 1.0f;
+	outSizeScaleY = 1.0f;
+	outOffsetX = 0;
+	outOffsetY = 0;
+
+	if (designWidth <= 0 || designHeight <= 0 || m_width == 0 || m_height == 0) {
+		return;
+	}
+
+	const Real scaleX = (Real)m_width / (Real)designWidth;
+	const Real scaleY = (Real)m_height / (Real)designHeight;
+	const Real designAspect = (Real)designWidth / (Real)designHeight;
+	const Real displayAspect = (Real)m_width / (Real)m_height;
+
+	if (displayAspect > designAspect) {
+		const Real uniformScale = scaleY;
+		outPosScaleX = uniformScale;
+		outPosScaleY = uniformScale;
+		outSizeScaleX = uniformScale;
+		outSizeScaleY = uniformScale;
+		outOffsetX = (Int)(((Real)m_width - (Real)designWidth * uniformScale) / 2.0f);
+	} else {
+		outPosScaleX = scaleX;
+		outPosScaleY = scaleY;
+		outSizeScaleX = scaleX;
+		outSizeScaleY = scaleY;
+	}
+}
+
+Bool Display::usesUltrawideHudCentering(Int designWidth, Int designHeight) const
+{
+	if (designWidth <= 0 || designHeight <= 0 || m_width == 0 || m_height == 0) {
+		return FALSE;
+	}
+
+	const Real designAspect = (Real)designWidth / (Real)designHeight;
+	const Real displayAspect = (Real)m_width / (Real)m_height;
+	return displayAspect > designAspect;
+}
+
 // Display::setWidth ==========================================================
 /** Set the width of the display */
 //=============================================================================
